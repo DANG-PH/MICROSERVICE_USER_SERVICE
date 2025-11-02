@@ -1,4 +1,4 @@
-import { Controller, InternalServerErrorException, ForbiddenException, NotFoundException, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { UserService } from './user.service';
 import { User_Entity } from './user.entity';
@@ -7,6 +7,8 @@ import { User_Position } from 'src/user-position/user-positon.entity';
 import type {User,GetUserRequest, UserResponse, AddBalanceRequest, BalanceResponse, AddItemRequest, MessageResponse, UsernameRequest, ItemListResponse, UseItemRequest, UserListResponse, RegisterResponse, RegisterRequest, UseBalanceRequest, UpdateBalanceRequest } from 'proto/user.pb';
 import { USER_SERVICE_NAME } from 'proto/user.pb';
 import { User_Web_Item } from 'src/user-web-item/user-web-item.entity';
+import { RpcException } from '@nestjs/microservices';
+import { status } from '@grpc/grpc-js';
 
 @Controller()
 export class UserController {
@@ -22,9 +24,9 @@ export class UserController {
     const userMoi = new User_Entity();
     const userMoiGameStats = new User_Game_Stats();
     const userMoiPosition = new User_Position();
-    userMoiGameStats.vang = 0;
-    userMoiGameStats.ngoc = 0;
-    userMoiGameStats.sucManh = 0;
+    userMoiGameStats.vang = 1000;
+    userMoiGameStats.ngoc = 20;
+    userMoiGameStats.sucManh = 2000;
     userMoiGameStats.vangNapTuWeb = 0;
     userMoiGameStats.ngocNapTuWeb = 0;
     userMoiGameStats.daVaoTaiKhoanLanDau = false;
@@ -44,7 +46,7 @@ export class UserController {
   @GrpcMethod(USER_SERVICE_NAME, 'GetProfile')
   async getProfile(data: GetUserRequest) : Promise<UserResponse> {
     const user = await this.userService.findByAuthId(data.id);
-    if (!user) throw new NotFoundException('User không tồn tại');
+    if (!user) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
     const userTraVe = {
       ...user.userPosition,
       ...user.userGameStats,
@@ -59,7 +61,7 @@ export class UserController {
   async saveGame(data: { user: User; sucManhDeTu: number }) {
     const { user, sucManhDeTu } = data;
     const found = await this.userService.findByAuthId(user.auth_id);
-    if (!found) throw new BadRequestException('User không tồn tại!');
+    if (!found) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
 
     found.userGameStats.vang = user.vang;
     found.userGameStats.ngoc = user.ngoc;
@@ -88,7 +90,7 @@ export class UserController {
   @GrpcMethod('UserService', 'GetBalance')
   async getBalance(data: UsernameRequest) {
     const found = await this.userService.findByAuthId(data.id);
-    if (!found) throw new BadRequestException('User không tồn tại!');
+    if (!found) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
     return {
       vangNapTuWeb: found.userGameStats.vangNapTuWeb,
       ngocNapTuWeb: found.userGameStats.ngocNapTuWeb,
@@ -96,34 +98,40 @@ export class UserController {
   }
 
   @GrpcMethod('UserService', 'UseVangNapTuWeb')
-  async useVangNapTuWeb(data: UseBalanceRequest) {
+  async useVangNapTuWeb(data: UseBalanceRequest): Promise<BalanceResponse> {
     const found = await this.userService.findByAuthId(data.id);
-    if (!found) throw new BadRequestException('User không tồn tại!');
-    if (found.userGameStats.vangNapTuWeb < data.amount)
-      throw new BadRequestException('Không đủ vàng nạp!');
-    found.userGameStats.vangNapTuWeb -= data.amount;
+    if (!found) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
+    if (Number(data.amount) === 0) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'vàng bị trừ phải > 0'});
+    if (found.userGameStats.vangNapTuWeb < Number(data.amount)) throw new RpcException({code: status.UNAUTHENTICATED ,message: `Không đủ vàng nạp, vàng nạp hiện có: ${found.userGameStats.vangNapTuWeb}`});
+    found.userGameStats.vangNapTuWeb -= Number(data.amount);
     await this.userService.saveUser(found);
-    return { used: data.amount };
+    return {
+      vangNapTuWeb: found.userGameStats.vangNapTuWeb,
+      ngocNapTuWeb: found.userGameStats.ngocNapTuWeb
+    };
   }
 
   @GrpcMethod('UserService', 'UseNgocNapTuWeb')
-  async useNgocNapTuWeb(data: UseBalanceRequest) {
+  async useNgocNapTuWeb(data: UseBalanceRequest): Promise<BalanceResponse> {
     const found = await this.userService.findByAuthId(data.id);
-    if (!found) throw new BadRequestException('User không tồn tại!');
-    if (found.userGameStats.ngocNapTuWeb < data.amount)
-      throw new BadRequestException('Không đủ ngọc nạp!');
-    found.userGameStats.ngocNapTuWeb -= data.amount;
+    if (!found) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
+    if (Number(data.amount) === 0) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'ngọc bị trừ phải > 0'});
+    if (found.userGameStats.vangNapTuWeb < Number(data.amount)) throw new RpcException({code: status.UNAUTHENTICATED ,message: `Không đủ ngọc nạp, ngọc nạp hiện có: ${found.userGameStats.vangNapTuWeb}`});
+    found.userGameStats.ngocNapTuWeb -= Number(data.amount);
     await this.userService.saveUser(found);
-    return { used: data.amount };
+    return {
+      vangNapTuWeb: found.userGameStats.vangNapTuWeb,
+      ngocNapTuWeb: found.userGameStats.ngocNapTuWeb
+    };
   }
 
   @GrpcMethod('UserService', 'UpdateBalance')
   async updateBalance(data: UpdateBalanceRequest) {
     const found = await this.userService.findByAuthId(data.id);
-    if (!found) throw new BadRequestException('User không tồn tại!');
+    if (!found) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
     if (data.type === 'vangNapTuWeb') found.userGameStats.vangNapTuWeb = data.amount;
     else if (data.type === 'ngocNapTuWeb') found.userGameStats.ngocNapTuWeb = data.amount;
-    else throw new BadRequestException('Loại balance không hợp lệ!');
+    else throw new RpcException({code: status.UNAUTHENTICATED ,message: 'Loại balance không hợp lệ'});
     await this.userService.saveUser(found);
     return {
       message: 'Cập nhật balance thành công!',
@@ -135,8 +143,8 @@ export class UserController {
   @GrpcMethod(USER_SERVICE_NAME, 'AddVangNapTuWeb')
   async addVangNapTuWeb(data: AddBalanceRequest): Promise<BalanceResponse> {
     const found = await this.userService.findByAuthId(data.id);
-    if (!found) throw new BadRequestException('User không tồn tại!');
-    if (data.amount <= 0) throw new BadRequestException('Số tiền phải lớn hơn 0!');
+    if (!found) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
+    if (data.amount <= 0) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'Số tiền phải lớn hơn 0'});
     found.userGameStats.vangNapTuWeb = Number(found.userGameStats.vangNapTuWeb) + Number(data.amount);
     await this.userService.saveUser(found);
     return {
@@ -148,8 +156,8 @@ export class UserController {
   @GrpcMethod(USER_SERVICE_NAME, 'AddNgocNapTuWeb')
   async addNgocNapTuWeb(data: AddBalanceRequest): Promise<BalanceResponse> {
     const found = await this.userService.findByAuthId(data.id);
-    if (!found) throw new BadRequestException('User không tồn tại!');
-    if (data.amount <= 0) throw new BadRequestException('Số tiền phải lớn hơn 0!');
+    if (!found) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
+    if (data.amount <= 0) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'Số tiền phải lớn hơn 0'});
     found.userGameStats.ngocNapTuWeb = Number(found.userGameStats.ngocNapTuWeb) + Number(data.amount);
     await this.userService.saveUser(found);
     return {
@@ -176,10 +184,10 @@ export class UserController {
   async addItemWeb(data: AddItemRequest): Promise<MessageResponse> {
     const { id : username, itemId } = data;
     if (!username || itemId == null)
-      throw new BadRequestException('username hoặc itemId không hợp lệ');
+      throw new RpcException({code: status.UNAUTHENTICATED ,message: 'Username hoặc itemId không tìm thấy'});
 
     const user = await this.userService.findByAuthId(username);
-    if (!user) throw new NotFoundException('User không tồn tại!');
+    if (!user) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
     if (!user.danhSachVatPhamWeb) user.danhSachVatPhamWeb = [];
     // Tạo item mới
     const newItem = new User_Web_Item();
@@ -198,7 +206,7 @@ export class UserController {
   @GrpcMethod(USER_SERVICE_NAME, 'GetItemsWeb')
   async getItemsWeb(data: UsernameRequest): Promise<ItemListResponse> {
     const user = await this.userService.findByAuthId(data.id);
-    if (!user) throw new NotFoundException('User không tồn tại!');
+    if (!user) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
     return { itemIds: user.danhSachVatPhamWeb.map(i => i.item_id) };
   }
 
@@ -206,15 +214,15 @@ export class UserController {
   async useItemWeb(data: UseItemRequest): Promise<MessageResponse> {
     const { id : username, itemId } = data;
     const user = await this.userService.findByAuthId(username);
-    if (!user) throw new NotFoundException('User không tồn tại!');
+    if (!user) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
 
     const item = user.danhSachVatPhamWeb.find(i => i.item_id === itemId);
-    if (!item) throw new BadRequestException(`User không có item ${itemId}`);
+    if (!item) throw new RpcException({code: status.UNAUTHENTICATED ,message: `User không có item ${itemId}`});
 
     user.danhSachVatPhamWeb = user.danhSachVatPhamWeb.filter(
       i => i.item_id !== itemId
     );
-    
+
     await this.userService.saveUser(user);
     return { message: `Đã sử dụng item ${itemId} cho user ${username}` };
   }
