@@ -20,6 +20,7 @@ export class UserGameStatsService {
     return await this.statsRepository.find({
       order: { sucManh: 'DESC' },
       take: 10,
+      relations: ['user']
     });
   }
 
@@ -28,6 +29,7 @@ export class UserGameStatsService {
     return await this.statsRepository.find({
       order: { vang: 'DESC' },
       take: 10,
+      relations: ['user']
     });
   }
 }

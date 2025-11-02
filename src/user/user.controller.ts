@@ -1,6 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { UserService } from './user.service';
+import { UserWebItemService } from 'src/user-web-item/user-web-item.service';
 import { User_Entity } from './user.entity';
 import { User_Game_Stats } from 'src/user-game-stats/user-game-stats.entity';
 import { User_Position } from 'src/user-position/user-positon.entity';
@@ -14,6 +15,7 @@ import { status } from '@grpc/grpc-js';
 export class UserController {
   constructor(
     private readonly userService: UserService,
+    private readonly userWebItemService: UserWebItemService,
   ) {}
 
   // ========== REGISTER ==========
@@ -216,14 +218,12 @@ export class UserController {
     const user = await this.userService.findByAuthId(username);
     if (!user) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
 
-    const item = user.danhSachVatPhamWeb.find(i => i.item_id === itemId);
+    console.log('danhSachVatPhamWeb:', user.danhSachVatPhamWeb);
+    const item = user.danhSachVatPhamWeb.find(i => i.item_id == itemId);
     if (!item) throw new RpcException({code: status.UNAUTHENTICATED ,message: `User không có item ${itemId}`});
 
-    user.danhSachVatPhamWeb = user.danhSachVatPhamWeb.filter(
-      i => i.item_id !== itemId
-    );
+    await this.userWebItemService.deleteById(item.id);
 
-    await this.userService.saveUser(user);
     return { message: `Đã sử dụng item ${itemId} cho user ${username}` };
   }
 }
