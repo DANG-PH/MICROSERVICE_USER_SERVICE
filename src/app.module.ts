@@ -7,6 +7,7 @@ import { UserModule } from './user/user.module';
 import { UserGameStatsModule } from './user-game-stats/user-game-stats.module';
 import { UserPositionModule } from './user-position/user-postion.module';
 import { UserWebItemModule } from './user-web-item/user-web-item.module';
+import { DeTuModule } from './detu/detu.module';
 
 @Module({
   imports: [
@@ -27,7 +28,8 @@ import { UserWebItemModule } from './user-web-item/user-web-item.module';
     UserModule,
     UserGameStatsModule,
     UserPositionModule,
-    UserWebItemModule
+    UserWebItemModule,
+    DeTuModule
   ],
   controllers: [AppController],
   providers: [AppService],

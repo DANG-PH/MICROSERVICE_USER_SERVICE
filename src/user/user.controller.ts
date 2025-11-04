@@ -10,12 +10,14 @@ import { USER_SERVICE_NAME } from 'proto/user.pb';
 import { User_Web_Item } from 'src/user-web-item/user-web-item.entity';
 import { RpcException } from '@nestjs/microservices';
 import { status } from '@grpc/grpc-js';
+import { DeTuService } from 'src/detu/detu.service';
 
 @Controller()
 export class UserController {
   constructor(
     private readonly userService: UserService,
     private readonly userWebItemService: UserWebItemService,
+    private readonly deTuService: DeTuService,
   ) {}
 
   // ========== REGISTER ==========
@@ -74,14 +76,7 @@ export class UserController {
     found.userGameStats.coDeTu = user.coDeTu;
 
     if (found.userGameStats.coDeTu) {
-    //   try {
-    //     const url = `http://localhost:3002/detu/saveGame/${user.username}`;
-    //     await firstValueFrom(this.httpService.post(url, { sucManh: sucManhDeTu }));
-    //     console.log('✅ Gửi dữ liệu đệ tử sang DeTuService');
-    //   } catch (error) {
-    //     console.error('❌ Lỗi khi gọi DeTuService:', error.message);
-    //     throw new InternalServerErrorException('Không thể lưu dữ liệu đệ tử');
-    //   }
+      this.deTuService.handleSaveDeTu({userId: found.id, sucManh: sucManhDeTu})
     }
 
     await this.userService.saveUser(found);
