@@ -7,9 +7,10 @@ import { UserGameStatsModule } from 'src/user-game-stats/user-game-stats.module'
 import { UserWebItemModule } from 'src/user-web-item/user-web-item.module';
 import { UserPositionModule } from 'src/user-position/user-postion.module';
 import { DeTuModule } from 'src/detu/detu.module';
+import { PayModule } from 'src/pay/pay.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User_Entity]),UserGameStatsModule,UserWebItemModule,UserPositionModule, DeTuModule], // Kết nối entity User
+  imports: [TypeOrmModule.forFeature([User_Entity]),UserGameStatsModule,UserWebItemModule,UserPositionModule, DeTuModule, PayModule], // Kết nối entity User
   providers: [UserService],                  // Service sẽ được inject
   controllers: [UserController],            // Controller xử lý API
   exports: [UserService],
