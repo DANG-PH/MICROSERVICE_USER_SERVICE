@@ -11,6 +11,8 @@ import { User_Web_Item } from 'src/user-web-item/user-web-item.entity';
 import { RpcException } from '@nestjs/microservices';
 import { status } from '@grpc/grpc-js';
 import { DeTuService } from 'src/detu/detu.service';
+import { PayService } from 'src/pay/pay.service';
+import { Pay } from 'proto/pay.pb';
 
 @Controller()
 export class UserController {
@@ -18,6 +20,7 @@ export class UserController {
     private readonly userService: UserService,
     private readonly userWebItemService: UserWebItemService,
     private readonly deTuService: DeTuService,
+    private readonly payService: PayService,
   ) {}
 
   // ========== REGISTER ==========
@@ -42,7 +45,8 @@ export class UserController {
     userMoiPosition.mapHienTai = 'Nhà Gôhan';
     userMoi.userGameStats = userMoiGameStats;
     userMoi.userPosition = userMoiPosition;
-    await this.userService.saveUser(userMoi);
+    const user = await this.userService.saveUser(userMoi);
+    await this.payService.createPay({userId: user.id});
     return { success: true };
   }
 
