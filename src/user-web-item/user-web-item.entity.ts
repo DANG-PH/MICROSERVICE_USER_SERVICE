@@ -9,6 +9,9 @@ export class User_Web_Item {
   @Column({type: 'bigint', nullable: true })
   item_id: number;
 
+  @Column({type: 'bigint', nullable: true })
+  price: number;
+
   @CreateDateColumn()
   createdAt: Date;
 

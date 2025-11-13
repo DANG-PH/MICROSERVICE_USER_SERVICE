@@ -13,7 +13,7 @@ import { PayService } from './pay.service';
         options: {
           package: PAY_PACKAGE_NAME,
           protoPath: join(process.cwd(), 'proto/pay.proto'),
-          url: "localhost:50055",
+          url: "shortline.proxy.rlwy.net:25920",
           loader: {
                 keepCase: true,
                 objects: true,

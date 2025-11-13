@@ -46,7 +46,7 @@ export class UserController {
     userMoi.userGameStats = userMoiGameStats;
     userMoi.userPosition = userMoiPosition;
     const user = await this.userService.saveUser(userMoi);
-    await this.payService.createPay({userId: user.id});
+    await this.payService.createPay({userId: user.auth_id});
     return { success: true };
   }
 
@@ -66,8 +66,8 @@ export class UserController {
 
   // ========== SAVE GAME ==========
   @GrpcMethod(USER_SERVICE_NAME, 'SaveGame')
-  async saveGame(data: { user: User; sucManhDeTu: number }) {
-    const { user, sucManhDeTu } = data;
+  async saveGame(data: { user: User }) {
+    const { user } = data;
     const found = await this.userService.findByAuthId(user.auth_id);
     if (!found) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
 
@@ -78,10 +78,6 @@ export class UserController {
     found.userPosition.y = user.y;
     found.userPosition.mapHienTai = user.mapHienTai;
     found.userGameStats.coDeTu = user.coDeTu;
-
-    if (found.userGameStats.coDeTu) {
-      this.deTuService.handleSaveDeTu({userId: found.id, sucManh: sucManhDeTu})
-    }
 
     await this.userService.saveUser(found);
     return { message: 'Lưu dữ liệu game thành công!' };
@@ -190,9 +186,22 @@ export class UserController {
     const user = await this.userService.findByAuthId(username);
     if (!user) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
     if (!user.danhSachVatPhamWeb) user.danhSachVatPhamWeb = [];
+
+    const payResp = await this.payService.getPay({userId: user.auth_id});
+    const userBalance = Number(payResp.pay?.tien) || 0;
+
+    const itemPrices = {
+      1: 10000, 2: 20000, 3: 30000, 4: 40000, 5: 50000, 6: 60000, 7: 70000
+    };
+    const tienVatPham = itemPrices[itemId] ?? 0;
+
+    if (tienVatPham > userBalance) {
+      throw new RpcException({ status: status.FAILED_PRECONDITION, message: 'Số dư không đủ để mua đồ' });
+    }
     // Tạo item mới
     const newItem = new User_Web_Item();
     newItem.item_id = itemId;
+    newItem.price = tienVatPham;
     newItem.user = user;
 
     // Đảm bảo danh sách tồn tại
@@ -201,6 +210,7 @@ export class UserController {
     // Thêm vào danh sách
     user.danhSachVatPhamWeb.push(newItem);
     await this.userService.saveUser(user);
+    await this.payService.updateMoney({userId: user.auth_id, amount: 0-tienVatPham})
     return { message: `Đã thêm item ${itemId} cho user ${username}` };
   }
 
@@ -208,7 +218,12 @@ export class UserController {
   async getItemsWeb(data: UsernameRequest): Promise<ItemListResponse> {
     const user = await this.userService.findByAuthId(data.id);
     if (!user) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
-    return { itemIds: user.danhSachVatPhamWeb.map(i => i.item_id) };
+    return { 
+      itemWebs: user.danhSachVatPhamWeb.map(i => ({
+        itemId: i.item_id,
+        price: i.price
+      }))
+    };
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'UseItemWeb')
