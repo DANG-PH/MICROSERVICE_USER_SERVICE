@@ -77,6 +77,9 @@ export class UserController {
     found.userPosition.x = user.x;
     found.userPosition.y = user.y;
     found.userPosition.mapHienTai = user.mapHienTai;
+    if (found.userGameStats.daVaoTaiKhoanLanDau == false) {
+      found.userGameStats.daVaoTaiKhoanLanDau = true;
+    }
     found.userGameStats.coDeTu = user.coDeTu;
 
     await this.userService.saveUser(found);
@@ -113,7 +116,7 @@ export class UserController {
     const found = await this.userService.findByAuthId(data.id);
     if (!found) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
     if (Number(data.amount) === 0) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'ngọc bị trừ phải > 0'});
-    if (found.userGameStats.vangNapTuWeb < Number(data.amount)) throw new RpcException({code: status.UNAUTHENTICATED ,message: `Không đủ ngọc nạp, ngọc nạp hiện có: ${found.userGameStats.vangNapTuWeb}`});
+    if (found.userGameStats.ngocNapTuWeb < Number(data.amount)) throw new RpcException({code: status.UNAUTHENTICATED ,message: `Không đủ ngọc nạp, ngọc nạp hiện có: ${found.userGameStats.ngocNapTuWeb}`});
     found.userGameStats.ngocNapTuWeb -= Number(data.amount);
     await this.userService.saveUser(found);
     return {
