@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn,CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { User_Entity } from 'src/user/user.entity';
+import { User_Entity } from 'src/service-trong/user/user.entity';
 
 @Entity('users-web-item')
 export class User_Web_Item {

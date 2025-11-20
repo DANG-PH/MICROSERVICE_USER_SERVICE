@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User_Entity } from './user.entity';
 import * as bcrypt from 'bcrypt';
-import { UserGameStatsService } from 'src/user-game-stats/user-game-stats.service';
+import { UserGameStatsService } from 'src/service-trong/user-game-stats/user-game-stats.service';
 import { User } from 'proto/user.pb';
 
 //UserService: quản lý user, CRUD, update stats.

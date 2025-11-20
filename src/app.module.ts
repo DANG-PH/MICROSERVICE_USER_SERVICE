@@ -3,12 +3,12 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { UserModule } from './user/user.module';
-import { UserGameStatsModule } from './user-game-stats/user-game-stats.module';
-import { UserPositionModule } from './user-position/user-postion.module';
-import { UserWebItemModule } from './user-web-item/user-web-item.module';
-import { DeTuModule } from './detu/detu.module';
-import { PayModule } from './pay/pay.module';
+import { UserModule } from './service-trong/user/user.module';
+import { UserGameStatsModule } from './service-trong/user-game-stats/user-game-stats.module';
+import { UserPositionModule } from './service-trong/user-position/user-postion.module';
+import { UserWebItemModule } from './service-trong/user-web-item/user-web-item.module';
+import { DeTuModule } from './service-ngoai/detu/detu.module';
+import { PayModule } from './service-ngoai/pay/pay.module';
 
 @Module({
   imports: [

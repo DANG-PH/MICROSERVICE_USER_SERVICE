@@ -1,17 +1,17 @@
 import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { UserService } from './user.service';
-import { UserWebItemService } from 'src/user-web-item/user-web-item.service';
+import { UserWebItemService } from 'src/service-trong/user-web-item/user-web-item.service';
 import { User_Entity } from './user.entity';
-import { User_Game_Stats } from 'src/user-game-stats/user-game-stats.entity';
-import { User_Position } from 'src/user-position/user-positon.entity';
+import { User_Game_Stats } from 'src/service-trong/user-game-stats/user-game-stats.entity';
+import { User_Position } from 'src/service-trong/user-position/user-positon.entity';
 import type {User,GetUserRequest, UserResponse, AddBalanceRequest, BalanceResponse, AddItemRequest, MessageResponse, UsernameRequest, ItemListResponse, UseItemRequest, UserListResponse, RegisterResponse, RegisterRequest, UseBalanceRequest, UpdateBalanceRequest } from 'proto/user.pb';
 import { USER_SERVICE_NAME } from 'proto/user.pb';
-import { User_Web_Item } from 'src/user-web-item/user-web-item.entity';
+import { User_Web_Item } from 'src/service-trong/user-web-item/user-web-item.entity';
 import { RpcException } from '@nestjs/microservices';
 import { status } from '@grpc/grpc-js';
-import { DeTuService } from 'src/detu/detu.service';
-import { PayService } from 'src/pay/pay.service';
+import { DeTuService } from 'src/service-ngoai/detu/detu.service';
+import { PayService } from 'src/service-ngoai/pay/pay.service';
 import { Pay } from 'proto/pay.pb';
 
 @Controller()

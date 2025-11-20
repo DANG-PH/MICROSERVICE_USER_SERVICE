@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, OneToOne, JoinColumn } from 'typeorm';
-import { User_Game_Stats } from 'src/user-game-stats/user-game-stats.entity';
-import { User_Entity } from 'src/user/user.entity';
+import { User_Game_Stats } from 'src/service-trong/user-game-stats/user-game-stats.entity';
+import { User_Entity } from 'src/service-trong/user/user.entity';
 
 @Entity('users-position')
 export class User_Position {

@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany, OneToOne,CreateDateColumn,UpdateDateColumn } from 'typeorm';
-import { User_Game_Stats } from 'src/user-game-stats/user-game-stats.entity';
-import { User_Position } from 'src/user-position/user-positon.entity';
-import { User_Web_Item } from 'src/user-web-item/user-web-item.entity';
+import { User_Game_Stats } from 'src/service-trong/user-game-stats/user-game-stats.entity';
+import { User_Position } from 'src/service-trong/user-position/user-positon.entity';
+import { User_Web_Item } from 'src/service-trong/user-web-item/user-web-item.entity';
 
 @Entity('users')
 export class User_Entity {
