@@ -46,7 +46,9 @@ export class UserController {
     userMoi.userGameStats = userMoiGameStats;
     userMoi.userPosition = userMoiPosition;
     const user = await this.userService.saveUser(userMoi);
-    await this.payService.createPay({userId: user.auth_id});
+
+    // await this.payService.createPay({userId: user.auth_id});
+
     return { success: true };
   }
 
