@@ -11,6 +11,9 @@ export class User_Entity {
   @Column({type: 'bigint', nullable: true })
   auth_id: number;
 
+  @Column()
+  gameName: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

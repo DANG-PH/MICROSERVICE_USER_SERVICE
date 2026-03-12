@@ -5,7 +5,7 @@ import { UserWebItemService } from 'src/service-trong/user-web-item/user-web-ite
 import { User_Entity } from './user.entity';
 import { User_Game_Stats } from 'src/service-trong/user-game-stats/user-game-stats.entity';
 import { User_Position } from 'src/service-trong/user-position/user-positon.entity';
-import type {User,GetUserRequest, UserResponse, AddBalanceRequest, BalanceResponse, AddItemRequest, MessageResponse, UsernameRequest, ItemListResponse, UseItemRequest, UserListResponse, RegisterResponse, RegisterRequest, UseBalanceRequest, UpdateBalanceRequest } from 'proto/user.pb';
+import type {User,GetUserRequest, UserResponse, AddBalanceRequest, BalanceResponse, AddItemRequest, MessageResponse, UsernameRequest, ItemListResponse, UseItemRequest, UserListResponse, RegisterResponse, RegisterRequest, UseBalanceRequest, UpdateBalanceRequest, GetPositionRequest, GetPositionResponse, SavePositionRequest, SavePositionResponse } from 'proto/user.pb';
 import { USER_SERVICE_NAME } from 'proto/user.pb';
 import { User_Web_Item } from 'src/service-trong/user-web-item/user-web-item.entity';
 import { RpcException } from '@nestjs/microservices';
@@ -13,6 +13,7 @@ import { status } from '@grpc/grpc-js';
 import { DeTuService } from 'src/service-ngoai/detu/detu.service';
 import { PayService } from 'src/service-ngoai/pay/pay.service';
 import { Pay } from 'proto/pay.pb';
+import { UserPositionService } from '../user-position/user-position.service';
 
 @Controller()
 export class UserController {
@@ -21,6 +22,7 @@ export class UserController {
     private readonly userWebItemService: UserWebItemService,
     private readonly deTuService: DeTuService,
     private readonly payService: PayService,
+    private readonly userPosition: UserPositionService
   ) {}
 
   // ========== REGISTER ==========
@@ -45,9 +47,12 @@ export class UserController {
     userMoiPosition.mapHienTai = 'Nhà Gôhan';
     userMoi.userGameStats = userMoiGameStats;
     userMoi.userPosition = userMoiPosition;
+
+    // tạm thời cho trùng gameName, sau này dùng saga pattern để roll back xóa record bên auth khi bên user trả lỗi
+    userMoi.gameName = data.gameName
     const user = await this.userService.saveUser(userMoi);
 
-    // await this.payService.createPay({userId: user.auth_id});
+    await this.payService.createPay({userId: user.auth_id});
 
     return { success: true };
   }
@@ -244,5 +249,26 @@ export class UserController {
     await this.userWebItemService.deleteById(item.id);
 
     return { message: `Đã sử dụng item ${itemId} cho user ${username}` };
+  }
+
+  @GrpcMethod(USER_SERVICE_NAME, 'GetPosition')
+  async GetPosition(data: GetPositionRequest): Promise<GetPositionResponse> {
+    const userPositionData = await this.userPosition.getPosition(data);
+    const user = await this.userService.findByAuthId(data.userId);
+    let result;
+    if (user) {
+      result = {
+        map: userPositionData.map,
+        x: userPositionData.x,
+        y: userPositionData.y,
+        gameName: user.gameName
+      }
+    }
+    return result;
+  }
+
+  @GrpcMethod(USER_SERVICE_NAME, 'SavePosition')
+  async SavePosition(data: SavePositionRequest): Promise<SavePositionResponse> {
+    return this.userPosition.savePosition(data)
   }
 }

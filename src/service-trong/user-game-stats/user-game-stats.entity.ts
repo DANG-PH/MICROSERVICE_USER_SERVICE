@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, OneToOne, JoinColumn, Index } from 'typeorm';
 import { User_Entity } from 'src/service-trong/user/user.entity';
 
 @Entity('user-game-stats')
@@ -6,12 +6,14 @@ export class User_Game_Stats {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Index()
   @Column({ type: 'bigint', default: 0 })
   vang: number;
 
   @Column({ type: 'bigint', default: 0 })
   ngoc: number;
 
+  @Index()
   @Column({ type: 'bigint', default: 0 })
   sucManh: number;
 

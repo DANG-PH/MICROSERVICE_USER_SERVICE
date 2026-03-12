@@ -25,6 +25,9 @@ import { PayModule } from './service-ngoai/pay/pay.module';
       database: process.env.DB_NAME,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true, 
+      extra: {
+        connectionLimit: 50
+      }
     }),
     UserModule,
     UserGameStatsModule,
