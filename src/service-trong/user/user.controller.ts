@@ -49,7 +49,7 @@ export class UserController {
     userMoi.userPosition = userMoiPosition;
 
     // tạm thời cho trùng gameName, sau này dùng saga pattern để roll back xóa record bên auth khi bên user trả lỗi
-    userMoi.gameName = data.gameName
+    userMoi.gameName = "admin";
     const user = await this.userService.saveUser(userMoi);
 
     await this.payService.createPay({userId: user.auth_id});
