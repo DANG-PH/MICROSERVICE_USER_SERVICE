@@ -5,7 +5,7 @@ import { UserWebItemService } from 'src/service-trong/user-web-item/user-web-ite
 import { User_Entity } from './user.entity';
 import { User_Game_Stats } from 'src/service-trong/user-game-stats/user-game-stats.entity';
 import { User_Position } from 'src/service-trong/user-position/user-positon.entity';
-import type {User,GetUserRequest, UserResponse, AddBalanceRequest, BalanceResponse, AddItemRequest, MessageResponse, UsernameRequest, ItemListResponse, UseItemRequest, UserListResponse, RegisterResponse, RegisterRequest, UseBalanceRequest, UpdateBalanceRequest, GetPositionRequest, GetPositionResponse, SavePositionRequest, SavePositionResponse } from 'proto/user.pb';
+import type {User,GetUserRequest, UserResponse, AddBalanceRequest, BalanceResponse, AddItemRequest, MessageResponse, UsernameRequest, ItemListResponse, UseItemRequest, UserListResponse, RegisterResponse, RegisterRequest, UseBalanceRequest, UpdateBalanceRequest, GetPositionRequest, GetPositionResponse, SavePositionRequest, SavePositionResponse, UseItemResponse } from 'proto/user.pb';
 import { USER_SERVICE_NAME } from 'proto/user.pb';
 import { User_Web_Item } from 'src/service-trong/user-web-item/user-web-item.entity';
 import { RpcException } from '@nestjs/microservices';
@@ -237,18 +237,44 @@ export class UserController {
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'UseItemWeb')
-  async useItemWeb(data: UseItemRequest): Promise<MessageResponse> {
-    const { id : username, itemId } = data;
+  async useItemWeb(data: UseItemRequest): Promise<UseItemResponse> {
+    const { id : username, itemIds } = data;
     const user = await this.userService.findByAuthId(username);
     if (!user) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
 
-    console.log('danhSachVatPhamWeb:', user.danhSachVatPhamWeb);
-    const item = user.danhSachVatPhamWeb.find(i => i.item_id == itemId);
-    if (!item) throw new RpcException({code: status.UNAUTHENTICATED ,message: `User không có item ${itemId}`});
+    // Đếm số lượng từng itemId client yêu cầu: { 1: 4, 2: 1, ... }
+    const requestedCounts = itemIds.reduce<Record<number, number>>(
+      (counts, id) => {
+        counts[id] = (counts[id] ?? 0) + 1;
+        return counts;
+      },
+      {}
+    );
 
-    await this.userWebItemService.deleteById(item.id);
+    // Với mỗi itemId, lấy đúng số lượng record cần xóa
+    const recordsToDelete: number[] = [];
 
-    return { message: `Đã sử dụng item ${itemId} cho user ${username}` };
+    for (const [itemId, count] of Object.entries(requestedCounts)) {
+      const matchingRecords = user.danhSachVatPhamWeb
+        .filter(i => i.item_id == Number(itemId))
+        .slice(0, count); // lấy đúng số lượng cần
+
+      if (matchingRecords.length < count) {
+        throw new RpcException({
+          code: status.FAILED_PRECONDITION,
+          message: `User không đủ item ${itemId}: cần ${count}, có ${matchingRecords.length}`,
+        });
+      }
+
+      recordsToDelete.push(...matchingRecords.map(r => r.id));
+    }
+
+    // Xóa tất cả trong 1 lần, nếu fail thì không partial delete
+    await this.userWebItemService.deleteManyByIds(recordsToDelete);
+
+    return {
+      successItemIds: itemIds, // trả lại đúng list itemIds đã dùng
+    };
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'GetPosition')
