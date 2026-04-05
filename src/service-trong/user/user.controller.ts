@@ -206,7 +206,7 @@ export class UserController {
     const tienVatPham = itemPrices[itemId] ?? 0;
 
     if (tienVatPham > userBalance) {
-      throw new RpcException({ status: status.FAILED_PRECONDITION, message: 'Số dư không đủ để mua đồ' });
+      throw new RpcException({ code: status.FAILED_PRECONDITION, message: 'Số dư không đủ để mua đồ' });
     }
     // Tạo item mới
     const newItem = new User_Web_Item();
