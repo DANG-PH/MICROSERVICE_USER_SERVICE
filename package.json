@@ -41,7 +41,7 @@
     "cache-manager": "^7.2.4",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
-    "ioredis": "^5.8.2",
+    "ioredis": "^5.10.1",
     "mysql2": "^3.15.3",
     "nest-winston": "^1.10.2",
     "passport": "^0.7.0",

@@ -14,16 +14,20 @@ import { DeTuService } from 'src/service-ngoai/detu/detu.service';
 import { PayService } from 'src/service-ngoai/pay/pay.service';
 import { Pay } from 'proto/pay.pb';
 import { UserPositionService } from '../user-position/user-position.service';
+import Redis from 'ioredis'
 
 @Controller()
 export class UserController {
+  private redis: Redis;
   constructor(
     private readonly userService: UserService,
     private readonly userWebItemService: UserWebItemService,
     private readonly deTuService: DeTuService,
     private readonly payService: PayService,
-    private readonly userPosition: UserPositionService
-  ) {}
+    private readonly userPosition: UserPositionService,
+  ) {
+    this.redis = new Redis(process.env.REDIS_URL || '')
+  }
 
   // ========== REGISTER ==========
   @GrpcMethod(USER_SERVICE_NAME, 'Register')
@@ -90,6 +94,11 @@ export class UserController {
     found.userGameStats.coDeTu = user.coDeTu;
 
     await this.userService.saveUser(found);
+
+  // DEL dirty flag sau khi write DB thành công
+  // -> đặt ở đây vì đây là điểm cuối, chắc chắn data đã được persist
+  // -> nếu đặt ở gateway (trước gRPC call) mà gRPC fail thì flag bị xóa nhưng data chưa save
+  await this.redis.del(`dirty:${user.auth_id}`)
     return { message: 'Lưu dữ liệu game thành công!' };
   }
 
