@@ -9,6 +9,7 @@ import { UserPositionModule } from './service-trong/user-position/user-postion.m
 import { UserWebItemModule } from './service-trong/user-web-item/user-web-item.module';
 import { DeTuModule } from './service-ngoai/detu/detu.module';
 import { PayModule } from './service-ngoai/pay/pay.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -34,7 +35,8 @@ import { PayModule } from './service-ngoai/pay/pay.module';
     UserPositionModule,
     UserWebItemModule,
     DeTuModule,
-    PayModule
+    PayModule,
+    RedisModule
   ],
   controllers: [AppController],
   providers: [AppService],

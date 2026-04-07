@@ -1,4 +1,4 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Inject } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { UserService } from './user.service';
 import { UserWebItemService } from 'src/service-trong/user-web-item/user-web-item.service';
@@ -18,16 +18,14 @@ import Redis from 'ioredis'
 
 @Controller()
 export class UserController {
-  private redis: Redis;
   constructor(
     private readonly userService: UserService,
     private readonly userWebItemService: UserWebItemService,
     private readonly deTuService: DeTuService,
     private readonly payService: PayService,
     private readonly userPosition: UserPositionService,
-  ) {
-    this.redis = new Redis(process.env.REDIS_URL || '')
-  }
+    @Inject('REDIS_CLIENT') private readonly redis: Redis,
+  ) {}
 
   // ========== REGISTER ==========
   @GrpcMethod(USER_SERVICE_NAME, 'Register')
