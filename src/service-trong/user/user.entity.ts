@@ -20,12 +20,12 @@ export class User_Entity {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @OneToOne(() => User_Game_Stats, userGameStats => userGameStats.user, { cascade: true, eager: true })
+  @OneToOne(() => User_Game_Stats, userGameStats => userGameStats.user, { cascade: true, eager: false })
   userGameStats: User_Game_Stats;
 
-  @OneToOne(() => User_Position, userPosition => userPosition.user, { cascade: true, eager: true })
+  @OneToOne(() => User_Position, userPosition => userPosition.user, { cascade: true, eager: false })
   userPosition: User_Position;
 
-  @OneToMany(() => User_Web_Item, item => item.user, { cascade: true, eager: true })
+  @OneToMany(() => User_Web_Item, item => item.user, { cascade: true, eager: false })
   danhSachVatPhamWeb: User_Web_Item[];
 }

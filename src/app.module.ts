@@ -27,7 +27,7 @@ import { RedisModule } from './redis/redis.module';
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true, 
       extra: {
-        connectionLimit: 50
+        connectionLimit: 30,   
       }
     }),
     UserModule,

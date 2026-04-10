@@ -23,7 +23,9 @@ export class UserService {
 
   // lấy toàn bộ user
   async getAllUsers(): Promise<User_Entity[]> {
-    return await this.userRepository.find();
+    return await this.userRepository.find({
+      relations: ['userGameStats', 'userPosition', 'danhSachVatPhamWeb']
+    });
   }
 
   // kiểm tra tồn tại Auth Id
@@ -34,7 +36,10 @@ export class UserService {
 
   // tìm user theo Auth Id
   async findByAuthId(authId: number): Promise<User_Entity | null> {
-    return await this.userRepository.findOne({ where: { auth_id: authId } });
+    return await this.userRepository.findOne({ 
+      where: { auth_id: authId },
+      relations: ['userGameStats', 'userPosition', 'danhSachVatPhamWeb']
+    });
   }
 
   // top 10 sức mạnh

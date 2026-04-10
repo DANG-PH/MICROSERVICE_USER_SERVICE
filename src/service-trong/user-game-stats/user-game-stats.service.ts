@@ -15,21 +15,27 @@ export class UserGameStatsService {
     return await this.statsRepository.find();
   }
 
-  // Top 10 theo sức mạnh
-  async getTop10UsersBySucManh(): Promise<User_Game_Stats[]> {
-    return await this.statsRepository.find({
-      order: { sucManh: 'DESC' },
-      take: 10,
-      relations: ['user']
-    });
+  async getTop10UsersBySucManh() {
+    return this.statsRepository                        // bắt đầu từ bảng user_game_stats
+          .createQueryBuilder('stats')              // đặt alias là 'stats'
+          .innerJoinAndSelect('stats.user', 'user') // JOIN users ON user.id = stats.userId
+                                                    // + SELECT luôn vào kết quả
+          .innerJoinAndSelect('user.userPosition', 'position') // JOIN user_position
+          .leftJoinAndSelect('user.danhSachVatPhamWeb', 'items') // LEFT JOIN items
+                                                    // (left vì user có thể không có item)
+          .orderBy('stats.sucManh', 'DESC')        // ORDER BY sucManh DESC
+          .limit(10)                               // LIMIT 10
+          .getMany()  
   }
 
-  // Top 10 theo vàng
-  async getTop10UsersByVang(): Promise<User_Game_Stats[]> {
-    return await this.statsRepository.find({
-      order: { vang: 'DESC' },
-      take: 10,
-      relations: ['user']
-    });
+  async getTop10UsersByVang() {
+    return this.statsRepository
+      .createQueryBuilder('stats')
+      .innerJoinAndSelect('stats.user', 'user')
+      .innerJoinAndSelect('user.userPosition', 'position')
+      .leftJoinAndSelect('user.danhSachVatPhamWeb', 'items')
+      .orderBy('stats.vang', 'DESC')
+      .limit(10)
+      .getMany();
   }
 }
