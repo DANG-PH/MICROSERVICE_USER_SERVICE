@@ -227,7 +227,7 @@ export class UserController {
     // Thêm vào danh sách
     user.danhSachVatPhamWeb.push(newItem);
     await this.userService.saveUser(user);
-    await this.payService.updateMoney({userId: user.auth_id, amount: 0-tienVatPham})
+    await this.payService.updateMoney({userId: user.auth_id, amount: 0-tienVatPham});
     return { message: `Đã thêm item ${itemId} cho user ${username}` };
   }
 
