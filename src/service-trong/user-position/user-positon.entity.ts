@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, OneToOne, JoinColumn, Index } from 'typeorm';
 import { User_Game_Stats } from 'src/service-trong/user-game-stats/user-game-stats.entity';
 import { User_Entity } from 'src/service-trong/user/user.entity';
 
@@ -16,6 +16,7 @@ export class User_Position {
   @Column({ default: 'Nhà Gôhan' })
   mapHienTai: string;
 
+  @Index()
   @OneToOne(() => User_Entity, user => user.userPosition, { nullable: false })
   @JoinColumn({ name: 'user_id' }) 
   user: User_Entity;

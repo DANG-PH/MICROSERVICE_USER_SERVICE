@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, OneToOne,CreateDateColumn,UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, OneToOne,CreateDateColumn,UpdateDateColumn, Index } from 'typeorm';
 import { User_Game_Stats } from 'src/service-trong/user-game-stats/user-game-stats.entity';
 import { User_Position } from 'src/service-trong/user-position/user-positon.entity';
 import { User_Web_Item } from 'src/service-trong/user-web-item/user-web-item.entity';
@@ -8,6 +8,7 @@ export class User_Entity {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Index()
   @Column({type: 'bigint', nullable: true })
   auth_id: number;
 
@@ -20,6 +21,18 @@ export class User_Entity {
   @UpdateDateColumn()
   updatedAt: Date;
 
+  
+  // Tắt eager để tối ưu query — tùy use case chọn load relation nào cần thiết
+  // thay vì mỗi lần query phải load cả 3 relations
+  // eager: true gây N+1 vì TypeORM chạy query riêng cho từng relation
+  // thay vì JOIN — ví dụ getTop10 với eager sẽ là 1 + 10 + 10 + 10 = 31 queries
+  // eager: false + relations:[...] hoặc QueryBuilder JoinAndSelect → 1 query duy nhất
+  //
+  // Bật cascade vì user/stats/position có vòng đời gắn liền:
+  // save user 1 lần → tự động save relations (Register, SaveGame)
+  // Lưu ý: cascade save toàn bộ relation đang attach vào entity
+  // → tránh modify relation chỉ để đọc tạm rồi vô tình save
+  // Nếu sau này mỗi relation có vòng đời riêng thì để cascade: false
   @OneToOne(() => User_Game_Stats, userGameStats => userGameStats.user, { cascade: true, eager: false })
   userGameStats: User_Game_Stats;
 

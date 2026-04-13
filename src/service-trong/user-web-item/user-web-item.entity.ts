@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn,CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn,CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 import { User_Entity } from 'src/service-trong/user/user.entity';
 
 @Entity('users-web-item')
@@ -18,6 +18,7 @@ export class User_Web_Item {
   @UpdateDateColumn()
   updatedAt: Date;
 
+  @Index()
   @ManyToOne(() => User_Entity, user => user.danhSachVatPhamWeb, { nullable: false })
   @JoinColumn({ name: 'user_id' })
   user: User_Entity;

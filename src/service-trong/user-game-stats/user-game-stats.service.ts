@@ -26,6 +26,27 @@ export class UserGameStatsService {
           .orderBy('stats.sucManh', 'DESC')        // ORDER BY sucManh DESC
           .limit(10)                               // LIMIT 10
           .getMany()  
+
+          // Nếu dùng thì phải đổi sang take
+          // vì limit kia nó chỉ lấy đc vài user do nó chỉ lấy theo row
+          // Phải dùng take ở tầng typeORM
+          // Vì có quan hệ 1-N
+          // Nên nó trả nhiều row sau leftJoin nên limit 10 bị sai
+          // Còn take thì không
+          // 1-1 thì số row sau join bằng đúng số user, số limit 10 luôn đúng
+          // Nếu cả position cũng là 1-N thì số row sẽ là N*N
+          // Nhưng may ở đây là positon 1-1 user
+
+
+          // InnerJoin
+          // → chỉ lấy stats có user tương ứng
+          // → stats không có user → bị loại
+          // Hợp lý vì stats không thể tồn tại không có user
+
+          // LeftJoin
+          // → lấy tất cả user dù có item hay không
+          // → user không có item → vẫn xuất hiện, items = []
+          // Hợp lý vì user mới chưa mua item nào vẫn phải có trong top 10
   }
 
   async getTop10UsersByVang() {
@@ -37,5 +58,23 @@ export class UserGameStatsService {
       .orderBy('stats.vang', 'DESC')
       .limit(10)
       .getMany();
+  }
+
+  // Cách relations
+  // Đọc comment ở trên, cái này dùng take nên đã giải quyết được vụ 1-n
+  async getTop10UsersBySucManhRelations() {
+    return this.statsRepository.find({
+      relations: ['user', 'user.userPosition','user.danhSachVatPhamWeb'],
+      order: { sucManh: 'DESC' },
+      take: 10,
+    });
+  }
+
+  async getTop10UsersByVangRelations() {
+    return this.statsRepository.find({
+      relations: ['user', 'user.userPosition','user.danhSachVatPhamWeb'],
+      order: { vang: 'DESC' },
+      take: 10,
+    });
   }
 }

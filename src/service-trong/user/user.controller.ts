@@ -62,7 +62,7 @@ export class UserController {
   // ========== PROFILE ==========
   @GrpcMethod(USER_SERVICE_NAME, 'GetProfile')
   async getProfile(data: GetUserRequest) : Promise<UserResponse> {
-    const user = await this.userService.findByAuthId(data.id);
+    const user = await this.userService.findByAuthIdFull(data.id);
     if (!user) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
     const userTraVe = {
       ...user.userPosition,
@@ -77,7 +77,7 @@ export class UserController {
   @GrpcMethod(USER_SERVICE_NAME, 'SaveGame')
   async saveGame(data: { user: User }) {
     const { user } = data;
-    const found = await this.userService.findByAuthId(user.auth_id);
+    const found = await this.userService.findByAuthIdWithStatsAndPosition(user.auth_id);
     if (!found) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
 
     found.userGameStats.vang = user.vang;
@@ -103,7 +103,7 @@ export class UserController {
   // ========== BALANCE ==========
   @GrpcMethod('UserService', 'GetBalance')
   async getBalance(data: UsernameRequest) {
-    const found = await this.userService.findByAuthId(data.id);
+    const found = await this.userService.findByAuthIdWithStats(data.id);
     if (!found) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
     return {
       vangNapTuWeb: found.userGameStats.vangNapTuWeb,
@@ -113,7 +113,7 @@ export class UserController {
 
   @GrpcMethod('UserService', 'UseVangNapTuWeb')
   async useVangNapTuWeb(data: UseBalanceRequest): Promise<BalanceResponse> {
-    const found = await this.userService.findByAuthId(data.id);
+    const found = await this.userService.findByAuthIdWithStats(data.id);
     if (!found) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
     if (Number(data.amount) === 0) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'vàng bị trừ phải > 0'});
     if (found.userGameStats.vangNapTuWeb < Number(data.amount)) throw new RpcException({code: status.UNAUTHENTICATED ,message: `Không đủ vàng nạp, vàng nạp hiện có: ${found.userGameStats.vangNapTuWeb}`});
@@ -127,7 +127,7 @@ export class UserController {
 
   @GrpcMethod('UserService', 'UseNgocNapTuWeb')
   async useNgocNapTuWeb(data: UseBalanceRequest): Promise<BalanceResponse> {
-    const found = await this.userService.findByAuthId(data.id);
+    const found = await this.userService.findByAuthIdWithStats(data.id);
     if (!found) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
     if (Number(data.amount) === 0) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'ngọc bị trừ phải > 0'});
     if (found.userGameStats.ngocNapTuWeb < Number(data.amount)) throw new RpcException({code: status.UNAUTHENTICATED ,message: `Không đủ ngọc nạp, ngọc nạp hiện có: ${found.userGameStats.ngocNapTuWeb}`});
@@ -141,7 +141,7 @@ export class UserController {
 
   @GrpcMethod('UserService', 'UpdateBalance')
   async updateBalance(data: UpdateBalanceRequest) {
-    const found = await this.userService.findByAuthId(data.id);
+    const found = await this.userService.findByAuthIdWithStats(data.id);
     if (!found) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
     if (data.type === 'vangNapTuWeb') found.userGameStats.vangNapTuWeb = data.amount;
     else if (data.type === 'ngocNapTuWeb') found.userGameStats.ngocNapTuWeb = data.amount;
@@ -156,7 +156,7 @@ export class UserController {
 
   @GrpcMethod(USER_SERVICE_NAME, 'AddVangNapTuWeb')
   async addVangNapTuWeb(data: AddBalanceRequest): Promise<BalanceResponse> {
-    const found = await this.userService.findByAuthId(data.id);
+    const found = await this.userService.findByAuthIdWithStats(data.id);
     if (!found) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
     if (data.amount <= 0) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'Số tiền phải lớn hơn 0'});
     found.userGameStats.vangNapTuWeb = Number(found.userGameStats.vangNapTuWeb) + Number(data.amount);
@@ -169,7 +169,7 @@ export class UserController {
 
   @GrpcMethod(USER_SERVICE_NAME, 'AddNgocNapTuWeb')
   async addNgocNapTuWeb(data: AddBalanceRequest): Promise<BalanceResponse> {
-    const found = await this.userService.findByAuthId(data.id);
+    const found = await this.userService.findByAuthIdWithStats(data.id);
     if (!found) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
     if (data.amount <= 0) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'Số tiền phải lớn hơn 0'});
     found.userGameStats.ngocNapTuWeb = Number(found.userGameStats.ngocNapTuWeb) + Number(data.amount);
@@ -200,7 +200,7 @@ export class UserController {
     if (!username || itemId == null)
       throw new RpcException({code: status.UNAUTHENTICATED ,message: 'Username hoặc itemId không tìm thấy'});
 
-    const user = await this.userService.findByAuthId(username);
+    const user = await this.userService.findByAuthIdWithItems(username);
     if (!user) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
     if (!user.danhSachVatPhamWeb) user.danhSachVatPhamWeb = [];
 
@@ -233,7 +233,7 @@ export class UserController {
 
   @GrpcMethod(USER_SERVICE_NAME, 'GetItemsWeb')
   async getItemsWeb(data: UsernameRequest): Promise<ItemListResponse> {
-    const user = await this.userService.findByAuthId(data.id);
+    const user = await this.userService.findByAuthIdWithItems(data.id);
     if (!user) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
     return { 
       itemWebs: user.danhSachVatPhamWeb.map(i => ({
@@ -246,7 +246,7 @@ export class UserController {
   @GrpcMethod(USER_SERVICE_NAME, 'UseItemWeb')
   async useItemWeb(data: UseItemRequest): Promise<UseItemResponse> {
     const { id : username, itemIds } = data;
-    const user = await this.userService.findByAuthId(username);
+    const user = await this.userService.findByAuthIdWithItems(username);
     if (!user) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
 
     // Đếm số lượng từng itemId client yêu cầu: { 1: 4, 2: 1, ... }
@@ -287,7 +287,7 @@ export class UserController {
   @GrpcMethod(USER_SERVICE_NAME, 'GetPosition')
   async GetPosition(data: GetPositionRequest): Promise<GetPositionResponse> {
     const userPositionData = await this.userPosition.getPosition(data);
-    const user = await this.userService.findByAuthId(data.userId);
+    const user = await this.userService.findByAuthIdFull(data.userId);
     let result;
     if (user) {
       result = {

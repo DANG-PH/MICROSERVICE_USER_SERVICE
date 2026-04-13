@@ -35,16 +35,40 @@ export class UserService {
     }
 
   // tìm user theo Auth Id
-  async findByAuthId(authId: number): Promise<User_Entity | null> {
-    return await this.userRepository.findOne({ 
+  // Chỉ cần stats — GetBalance, UseVang, UseNgoc, UpdateBalance, AddVang, AddNgoc
+  async findByAuthIdWithStats(authId: number) {
+    return this.userRepository.findOne({
       where: { auth_id: authId },
-      relations: ['userGameStats', 'userPosition', 'danhSachVatPhamWeb']
+      relations: ['userGameStats'],
+    });
+  }
+
+  // Cần stats + position — SaveGame
+  async findByAuthIdWithStatsAndPosition(authId: number) {
+    return this.userRepository.findOne({
+      where: { auth_id: authId },
+      relations: ['userGameStats', 'userPosition'],
+    });
+  }
+
+  // Cần tất cả — GetProfile, AddItemWeb, GetItemsWeb, UseItemWeb
+  async findByAuthIdFull(authId: number) {
+    return this.userRepository.findOne({
+      where: { auth_id: authId },
+      relations: ['userGameStats', 'userPosition', 'danhSachVatPhamWeb'],
+    });
+  }
+
+  async findByAuthIdWithItems(authId: number) {
+    return this.userRepository.findOne({
+      where: { auth_id: authId },
+      relations: ['danhSachVatPhamWeb'],
     });
   }
 
   // top 10 sức mạnh
   async getTop10UsersBySucManh(): Promise<User[]> {
-    const stats = await this.userGameStatsService.getTop10UsersBySucManh();
+    const stats = await this.userGameStatsService.getTop10UsersBySucManhRelations();
     return stats.map(s => ({
       ...s,
       ...s.user.userPosition,
@@ -57,7 +81,7 @@ export class UserService {
 
   // top 10 vàng
   async getTop10UsersByVang(): Promise<User[]> {
-    const stats = await this.userGameStatsService.getTop10UsersByVang();
+    const stats = await this.userGameStatsService.getTop10UsersByVangRelations();
     return stats.map(s => ({
       ...s,
       ...s.user.userPosition,

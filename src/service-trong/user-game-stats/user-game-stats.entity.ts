@@ -6,14 +6,12 @@ export class User_Game_Stats {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Index()
   @Column({ type: 'bigint', default: 0 })
   vang: number;
 
   @Column({ type: 'bigint', default: 0 })
   ngoc: number;
 
-  @Index()
   @Column({ type: 'bigint', default: 0 })
   sucManh: number;
 
@@ -29,6 +27,7 @@ export class User_Game_Stats {
   @Column({ default: false })
   coDeTu: boolean;
 
+  @Index()
   @OneToOne(() => User_Entity, user => user.userGameStats, { nullable: false })
   @JoinColumn({ name: 'user_id' }) 
   user: User_Entity;
