@@ -16,7 +16,6 @@ export class User_Position {
   @Column({ default: 'Nhà Gôhan' })
   mapHienTai: string;
 
-
   // InnoDB tự đánh index
   @OneToOne(() => User_Entity, user => user.userPosition, { nullable: false })
   @JoinColumn({ name: 'user_id' }) 
