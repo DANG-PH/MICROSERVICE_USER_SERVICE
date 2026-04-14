@@ -72,6 +72,7 @@ export class UserController {
       ...user,
       danhSachVatPhamWeb: user.danhSachVatPhamWeb.map(i => i.item_id)
     };
+    console.log(`[Profile Trả API Gateway] authId=${data.id} took ${Date.now() - start}ms`);
     return  { user: userTraVe };
   }
 

@@ -97,3 +97,44 @@ export class UserService {
     );
   }
 }
+
+// [NestJS + TypeORM]
+//     │
+//     │  (build query + serialize)
+//     ▼
+// [TCP connection pool]
+//     │
+//     │  (~1–3ms)
+//     ▼
+// [VPS A → VPS B network]
+//     │
+//     ▼
+// [Nginx stream :33306]
+//     │  (~0.5–1.5ms)
+//     ▼
+// [Host network (127.0.0.1)]
+//     │
+//     ▼
+// [Docker bridge (docker0 → veth)]
+//     │  (~0.3–1ms)
+//     ▼
+// [MySQL container]
+//     │
+//     │  (~1ms query execution - đã verify bằng EXPLAIN)
+//     ▼
+// [Result set (JOIN rows)]
+//     │
+//     ▼
+// [TypeORM hydration + mapping]
+//     │  (~3–6ms)
+//     ▼
+// [Return response]
+
+// MySQL execution     ~1ms   ✅ (đã tối ưu)
+// Network            ~2ms
+// Nginx stream       ~1ms
+// Docker network     ~0.5ms
+// ORM mapping        ~3–6ms  ❗ biggest chunk
+// -----------------------------------------
+// TOTAL              ~8–12ms (P50)
+// Spike              ~15–22ms (P95)
