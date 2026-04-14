@@ -62,7 +62,9 @@ export class UserController {
   // ========== PROFILE ==========
   @GrpcMethod(USER_SERVICE_NAME, 'GetProfile')
   async getProfile(data: GetUserRequest) : Promise<UserResponse> {
+    const start = Date.now();
     const user = await this.userService.findByAuthIdFull(data.id);
+    console.log(`[Profile DB] authId=${data.id} took ${Date.now() - start}ms`);
     if (!user) throw new RpcException({code: status.UNAUTHENTICATED ,message: 'User không tồn tại'});
     const userTraVe = {
       ...user.userPosition,
