@@ -15,6 +15,12 @@ export class User_Entity {
   @Column({ nullable: true, default: "" })
   gameName: string;
 
+  // Chấp nhận duplicate data với auth service để đổi lại performance và không phụ thuộc network + giảm latency
+  // Trade off là eventual consistency, khi update phải update cả 2 db
+  // Không sao vì đây là trade off đúng đắn vì avatar có thể eventual consistency dựa vào event driven
+  @Column({ nullable: true, default: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ_kwJh8vqmnSIbpOpY3sAGdIP4B7gEUnnYrQ&s' })
+  avatarUrl: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

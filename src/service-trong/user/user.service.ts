@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { User_Entity } from './user.entity';
 import * as bcrypt from 'bcrypt';
 import { UserGameStatsService } from 'src/service-trong/user-game-stats/user-game-stats.service';
-import { User } from 'proto/user.pb';
+import { User, UserBxh } from 'proto/user.pb';
 
 //UserService: quản lý user, CRUD, update stats.
 @Injectable()
@@ -67,28 +67,33 @@ export class UserService {
   }
 
   // top 10 sức mạnh
-  async getTop10UsersBySucManh(): Promise<User[]> {
+  async getTop10UsersBySucManh(): Promise<UserBxh[]> {
     const stats = await this.userGameStatsService.getTop10UsersBySucManhRelations();
     return stats.map(s => ({
-      ...s,
-      ...s.user.userPosition,
-      ...s.user,
-      id: s.user.id,
-      danhSachVatPhamWeb: s.user.danhSachVatPhamWeb.map(i => i.item_id),
-      auth_id: Number(s.user.auth_id),
+      vang: s.vang,
+      ngoc: s.ngoc,
+      sucManh: s.sucManh,
+      gameName: s.user.gameName,
+      avatarUrl: s.user.avatarUrl,
     }));
   }
 
   // top 10 vàng
-  async getTop10UsersByVang(): Promise<User[]> {
+  async getTop10UsersByVang(): Promise<UserBxh[]> {
     const stats = await this.userGameStatsService.getTop10UsersByVangRelations();
     return stats.map(s => ({
-      ...s,
-      ...s.user.userPosition,
-      ...s.user,
-      id: s.user.id,
-      danhSachVatPhamWeb: s.user.danhSachVatPhamWeb.map(i => i.item_id),
-      auth_id: Number(s.user.auth_id),
+      vang: s.vang,
+      ngoc: s.ngoc,
+      sucManh: s.sucManh,
+      gameName: s.user.gameName,
+      avatarUrl: s.user.avatarUrl,
     }));
+  }
+
+  async updateAvatar(authId: number, avatarUrl: string): Promise<void> {
+    await this.userRepository.update(
+      { auth_id: authId },
+      { avatarUrl }
+    );
   }
 }

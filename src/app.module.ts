@@ -10,6 +10,7 @@ import { UserWebItemModule } from './service-trong/user-web-item/user-web-item.m
 import { DeTuModule } from './service-ngoai/detu/detu.module';
 import { PayModule } from './service-ngoai/pay/pay.module';
 import { RedisModule } from './redis/redis.module';
+import { ConsumerModule } from './service-trong/consumers/consumer.module';
 
 @Module({
   imports: [
@@ -36,7 +37,8 @@ import { RedisModule } from './redis/redis.module';
     UserWebItemModule,
     DeTuModule,
     PayModule,
-    RedisModule
+    RedisModule,
+    ConsumerModule
   ],
   controllers: [AppController],
   providers: [AppService],

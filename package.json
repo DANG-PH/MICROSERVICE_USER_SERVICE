@@ -38,6 +38,8 @@
     "@opentelemetry/auto-instrumentations-node": "^0.67.0",
     "@opentelemetry/exporter-jaeger": "^2.2.0",
     "@opentelemetry/sdk-node": "^0.208.0",
+    "amqp-connection-manager": "^5.0.0",
+    "amqplib": "^1.0.3",
     "bcrypt": "^6.0.0",
     "cache-manager": "^7.2.4",
     "class-transformer": "^0.5.1",

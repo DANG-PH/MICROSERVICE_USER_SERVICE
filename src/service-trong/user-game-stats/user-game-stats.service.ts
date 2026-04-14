@@ -77,4 +77,21 @@ export class UserGameStatsService {
       take: 10,
     });
   }
+
+  // 2 cách trên nếu muốn lấy full user, còn nếu chỉ muốn lấy stat thì dùng hàm dưới
+  async getTop10UsersBySucManhStats() {
+    return this.statsRepository.find({
+      relations: ['user'],
+      order: { sucManh: 'DESC' },
+      take: 10,
+    });
+  }
+
+  async getTop10UsersByVangStats() {
+    return this.statsRepository.find({
+      relations: ['user'],
+      order: { vang: 'DESC' },
+      take: 10,
+    });
+  }
 }
