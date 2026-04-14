@@ -16,7 +16,11 @@ export class User_Position {
   @Column({ default: 'Nhà Gôhan' })
   mapHienTai: string;
 
+  // FK column thật sự trong DB
+  @Column()
   @Index()
+  user_id: number;
+
   @OneToOne(() => User_Entity, user => user.userPosition, { nullable: false })
   @JoinColumn({ name: 'user_id' }) 
   user: User_Entity;
