@@ -20,6 +20,6 @@ export class User_Web_Item {
 
   // InnoDB tự đánh index
   @ManyToOne(() => User_Entity, user => user.danhSachVatPhamWeb, { nullable: false })
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: 'userId' })
   user: User_Entity;
 }

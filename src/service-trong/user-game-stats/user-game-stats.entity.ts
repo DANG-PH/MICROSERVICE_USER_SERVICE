@@ -65,6 +65,6 @@ export class User_Game_Stats {
 
   // InnoDB tự đánh index
   @OneToOne(() => User_Entity, user => user.userGameStats, { nullable: false })
-  @JoinColumn({ name: 'user_id' }) 
+  @JoinColumn({ name: 'userId' }) 
   user: User_Entity;
 }

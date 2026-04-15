@@ -18,6 +18,6 @@ export class User_Position {
 
   // InnoDB tự đánh index
   @OneToOne(() => User_Entity, user => user.userPosition, { nullable: false })
-  @JoinColumn({ name: 'user_id' }) 
+  @JoinColumn({ name: 'userId' }) 
   user: User_Entity;
 }
