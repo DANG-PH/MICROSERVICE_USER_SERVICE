@@ -41,7 +41,9 @@ export class UserController {
   @GrpcMethod(USER_SERVICE_NAME, 'Register')
   async register(data: RegisterRequest): Promise<RegisterResponse> {
     const exists = await this.userService.existsByAuthId(data.id);
-    if (exists) return { success: false };
+    // Đã tồn tại → coi như thành công, idempotent
+    // Cron retry an toàn mà không bị loop
+    if (exists) return { success: true };
     const userMoi = new User_Entity();
     const userMoiGameStats = new User_Game_Stats();
     const userMoiPosition = new User_Position();
