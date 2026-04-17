@@ -11,6 +11,7 @@ import { DeTuModule } from './service-ngoai/detu/detu.module';
 import { PayModule } from './service-ngoai/pay/pay.module';
 import { RedisModule } from './redis/redis.module';
 import { ConsumerModule } from './service-trong/consumers/consumer.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { ConsumerModule } from './service-trong/consumers/consumer.module';
       isGlobal: true,           
       envFilePath: '.env',     
     }),
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'mysql',
       host: process.env.DB_HOST,

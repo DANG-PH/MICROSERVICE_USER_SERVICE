@@ -15,6 +15,11 @@ import { PayService } from 'src/service-ngoai/pay/pay.service';
 import { Pay } from 'proto/pay.pb';
 import { UserPositionService } from '../user-position/user-position.service';
 import Redis from 'ioredis'
+import { LessThanOrEqual, Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+import { CreatePayOutbox } from './register-outbox.entity';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Controller()
 export class UserController {
@@ -25,6 +30,11 @@ export class UserController {
     private readonly payService: PayService,
     private readonly userPosition: UserPositionService,
     @Inject('REDIS_CLIENT') private readonly redis: Redis,
+    @InjectRepository(User_Entity)
+    private readonly userRepository: Repository<User_Entity>,
+    @InjectRepository(CreatePayOutbox)
+    private readonly createPayOutboxRepo: Repository<CreatePayOutbox>,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   // ========== REGISTER ==========
@@ -52,11 +62,98 @@ export class UserController {
 
     // tạm thời cho trùng gameName, sau này dùng saga pattern để roll back xóa record bên auth khi bên user trả lỗi
     userMoi.gameName = data.gameName ?? "user";
-    const user = await this.userService.saveUser(userMoi);
+    await this.userRepository.manager.transaction(async (manager) => {
+      const user = await manager.save(User_Entity, userMoi);
 
-    await this.payService.createPay({userId: user.auth_id});
+      const outbox = manager.create(CreatePayOutbox, {
+        payload: { userId: user.auth_id },
+        status: 'PENDING',
+        nextRetryAt: new Date(),
+      });
+      await manager.save(outbox);
+    });
+
+    // Fast path: gọi pay service ngay, không chờ cron
+    // Cron chỉ là fallback khi server crash sau transaction commit
+    // Không await — pay không cần có ngay, không block response về auth service
+    this.eventEmitter.emit('pay.create', { userId: data.id });
 
     return { success: true };
+  }
+
+  // ─── Event handler: fast path ─────────────────────────────────────────────────
+  @OnEvent('pay.create')
+  async handlePayCreate(event: { userId: number }): Promise<void> {
+    try {
+      await this.payService.createPay({ userId: event.userId });
+      // Đánh DONE để cron không pick up lại
+      await this.createPayOutboxRepo.update(
+        { payload: { userId: event.userId } as any, status: 'PENDING' },
+        { status: 'DONE' },
+      );
+    } catch (error) {
+      // Fast path fail → cron sẽ retry, không cần làm gì thêm
+      console.warn(`[pay] fast path fail userId: ${event.userId} — cron sẽ retry`, error);
+    }
+  }
+
+  // ─── CRON: Retry đến khi Pay tạo được ────────────────────────────────────────
+  // Không có maxRetries — bắt buộc phải tạo được vì auth + user đã tồn tại
+  // Chỉ dừng khi DONE, không bao giờ đánh FAILED
+
+  @Cron(CronExpression.EVERY_5_SECONDS)
+  async pollCreatePayOutbox(): Promise<void> {
+    const events = await this.createPayOutboxRepo.find({
+      where: { status: 'PENDING', nextRetryAt: LessThanOrEqual(new Date()) },
+      order: { createdAt: 'ASC' },
+      take: 20,
+    });
+
+    for (const event of events) {
+      const result = await this.createPayOutboxRepo.update(
+        { id: event.id, status: 'PENDING' },
+        { status: 'PROCESSING' },
+      );
+      if (result.affected === 0) continue;
+
+      try {
+        const payload = event.payload as { userId: number };
+        await this.payService.createPay({ userId: payload.userId });
+        await this.createPayOutboxRepo.update(event.id, { status: 'DONE' });
+      } catch (error) {
+        // Retry mãi với exponential backoff — không đánh FAILED
+        // Vì auth + user đã tạo rồi, pay bắt buộc phải tạo được
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const delayMs = Math.pow(2, Math.min(event.retries, 10)) * 5_000; // tối đa ~85 phút mỗi lần
+        await this.createPayOutboxRepo.update(event.id, {
+          status: 'PENDING',
+          retries: event.retries + 1,
+          nextRetryAt: new Date(Date.now() + delayMs),
+          lastError: errorMessage,
+        });
+        console.warn(`[pay] retry ${event.retries + 1} userId: ${(event.payload as any).userId}`);
+
+        // Alert sau 10 lần fail liên tiếp để dev biết Pay Service có vấn đề
+        if (event.retries >= 10) {
+          console.error(`[pay] CRITICAL retry ${event.retries} — Pay Service có vấn đề?`, {
+            userId: (event.payload as any).userId,
+            errorMessage,
+          });
+          // TODO: alert Discord/Slack
+        }
+      }
+    }
+  }
+
+  // ─── CRON: Recover stuck PROCESSING ──────────────────────────────────────────
+
+  @Cron('*/30 * * * * *')
+  async recoverStuckProcessing(): Promise<void> {
+    const stuckThreshold = new Date(Date.now() - 5 * 60_000);
+    await this.createPayOutboxRepo.update(
+      { status: 'PROCESSING', updatedAt: LessThanOrEqual(stuckThreshold) },
+      { status: 'PENDING' },
+    );
   }
 
   // ========== PROFILE ==========

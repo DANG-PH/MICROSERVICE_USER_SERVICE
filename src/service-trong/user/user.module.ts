@@ -8,9 +8,10 @@ import { UserWebItemModule } from 'src/service-trong/user-web-item/user-web-item
 import { UserPositionModule } from 'src/service-trong/user-position/user-postion.module';
 import { DeTuModule } from 'src/service-ngoai/detu/detu.module';
 import { PayModule } from 'src/service-ngoai/pay/pay.module';
+import { CreatePayOutbox } from './register-outbox.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User_Entity]),UserGameStatsModule,UserWebItemModule,UserPositionModule, DeTuModule, PayModule], // Kết nối entity User
+  imports: [TypeOrmModule.forFeature([User_Entity, CreatePayOutbox]),UserGameStatsModule,UserWebItemModule,UserPositionModule, DeTuModule, PayModule], // Kết nối entity User
   providers: [UserService],                  // Service sẽ được inject
   controllers: [UserController],            // Controller xử lý API
   exports: [UserService],
