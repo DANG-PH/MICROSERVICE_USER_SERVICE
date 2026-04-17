@@ -12,6 +12,7 @@ import { PayModule } from './service-ngoai/pay/pay.module';
 import { RedisModule } from './redis/redis.module';
 import { ConsumerModule } from './service-trong/consumers/consumer.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ScheduleModule } from '@nestjs/schedule';
         connectionLimit: 30,   
       }
     }),
+    EventEmitterModule.forRoot(), 
     UserModule,
     UserGameStatsModule,
     UserPositionModule,

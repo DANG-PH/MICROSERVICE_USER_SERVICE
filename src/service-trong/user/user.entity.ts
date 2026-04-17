@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, OneToOne,CreateDateColumn,UpdateDateColumn, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, OneToOne,CreateDateColumn,UpdateDateColumn, Index, Unique } from 'typeorm';
 import { User_Game_Stats } from 'src/service-trong/user-game-stats/user-game-stats.entity';
 import { User_Position } from 'src/service-trong/user-position/user-positon.entity';
 import { User_Web_Item } from 'src/service-trong/user-web-item/user-web-item.entity';
@@ -8,8 +8,7 @@ export class User_Entity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Index()
-  @Column({type: 'bigint', nullable: true })
+  @Column({ type: 'bigint', nullable: true, unique: true })
   auth_id: number;
 
   @Column({ nullable: true, default: "" })
