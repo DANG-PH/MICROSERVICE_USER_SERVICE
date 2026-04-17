@@ -16,7 +16,7 @@ export class CreatePayOutbox {
   @Column({ default: 0 })
   retries: number;
 
-  @Column({ nullable: true, type: 'timestamptz' })
+  @Column({ nullable: true, type: 'datetime' })
   nextRetryAt: Date;
 
   @Column({ nullable: true, type: 'text' })
