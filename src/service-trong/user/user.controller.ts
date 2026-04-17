@@ -83,18 +83,39 @@ export class UserController {
     return { success: true };
   }
 
-  // ─── Event handler: fast path ─────────────────────────────────────────────────
+  parseGrpcError(err: any) {
+    if (err?.code !== undefined && err?.details) {
+      return { code: err.code, message: err.details };
+    }
+  }
+
   @OnEvent('pay.create')
   async handlePayCreate(event: { userId: number }): Promise<void> {
     try {
       await this.payService.createPay({ userId: event.userId });
-      // Đánh DONE để cron không pick up lại
       await this.createPayOutboxRepo.update(
         { payload: { userId: event.userId } as any, status: 'PENDING' },
         { status: 'DONE' },
       );
     } catch (error) {
-      // Fast path fail → cron sẽ retry, không cần làm gì thêm
+      const rpcError = this.parseGrpcError(error);
+
+      // Pay Service throw ALREADY_EXISTS thay vì trả success: true khi ví đã tồn tại
+      // → Buộc caller (User Service) phải tự bắt lỗi và xử lý
+      // → Nếu có nhiều caller khác gọi createPay, mỗi nơi đều phải tự parseGrpcError
+      // → Dễ bỏ sót, không nhất quán
+      //
+      // Khác với User Service register: trả { success: true } khi auth_id đã tồn tại
+      // → Idempotency được xử lý ngay tại downstream (User Service)
+      // → Caller (Auth Service) không cần biết gì thêm, không cần catch case đặc biệt
+      // → Chuẩn hơn vì outbox/cron retry nhiều lần vẫn an toàn mà không cần logic thêm ở caller
+      if (rpcError?.code === status.ALREADY_EXISTS) {
+        await this.createPayOutboxRepo.update(
+          { payload: { userId: event.userId } as any, status: 'PENDING' },
+          { status: 'DONE' },
+        );
+        return;
+      }
       console.warn(`[pay] fast path fail userId: ${event.userId} — cron sẽ retry`, error);
     }
   }
@@ -123,10 +144,19 @@ export class UserController {
         await this.payService.createPay({ userId: payload.userId });
         await this.createPayOutboxRepo.update(event.id, { status: 'DONE' });
       } catch (error) {
+        const rpcError = this.parseGrpcError(error);
+
+        // Pay Service throw ALREADY_EXISTS → ví đã tạo rồi (fast path chạy xong trước cron)
+        // → đánh DONE luôn, không retry
+        if (rpcError?.code === status.ALREADY_EXISTS) {
+          await this.createPayOutboxRepo.update(event.id, { status: 'DONE' });
+          continue;
+        }
+
         // Retry mãi với exponential backoff — không đánh FAILED
         // Vì auth + user đã tạo rồi, pay bắt buộc phải tạo được
         const errorMessage = error instanceof Error ? error.message : String(error);
-        const delayMs = Math.pow(2, Math.min(event.retries, 10)) * 5_000; // tối đa ~85 phút mỗi lần
+        const delayMs = Math.pow(2, Math.min(event.retries, 10)) * 5_000;
         await this.createPayOutboxRepo.update(event.id, {
           status: 'PENDING',
           retries: event.retries + 1,
@@ -135,7 +165,6 @@ export class UserController {
         });
         console.warn(`[pay] retry ${event.retries + 1} userId: ${(event.payload as any).userId}`);
 
-        // Alert sau 10 lần fail liên tiếp để dev biết Pay Service có vấn đề
         if (event.retries >= 10) {
           console.error(`[pay] CRITICAL retry ${event.retries} — Pay Service có vấn đề?`, {
             userId: (event.payload as any).userId,
