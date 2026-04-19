@@ -20,6 +20,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CreatePayOutbox } from './register-outbox.entity';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { BuyItemOutbox } from './buy-item-outbox.entity';
 
 @Controller()
 export class UserController {
@@ -34,6 +35,8 @@ export class UserController {
     private readonly userRepository: Repository<User_Entity>,
     @InjectRepository(CreatePayOutbox)
     private readonly createPayOutboxRepo: Repository<CreatePayOutbox>,
+    @InjectRepository(BuyItemOutbox)
+    private readonly buyItemOutboxRepo: Repository<BuyItemOutbox>,
     private eventEmitter: EventEmitter2,
   ) {}
 
@@ -354,9 +357,129 @@ export class UserController {
 
     // Thêm vào danh sách
     user.danhSachVatPhamWeb.push(newItem);
-    await this.userService.saveUser(user);
-    await this.payService.updateMoney({userId: user.auth_id, amount: 0-tienVatPham, idempotencyKey: "MUA_ITEM: "+newItem.id});
-    return { message: `Đã thêm item ${itemId} cho user ${username}` };
+    // Ghi item + outbox trong cùng 1 transaction
+    // → đảm bảo: nếu crash sau transaction, cron sẽ retry trừ tiền
+    // → nếu crash trước transaction commit, cả 2 đều không tồn tại → an toàn
+    let savedItemId: number;
+    await this.userRepository.manager.transaction(async (manager) => {
+      await manager.save(User_Entity, user);
+      savedItemId = newItem.id;
+ 
+      const outbox = manager.create(BuyItemOutbox, {
+        payload: {
+          userId: user.auth_id,
+          amount: -tienVatPham,
+          // idempotencyKey gắn với itemId cụ thể → pay service dùng để chống double-charge
+          idempotencyKey: `MUA_ITEM:${savedItemId}`,
+        },
+        status: 'PENDING',
+        nextRetryAt: new Date(),
+      });
+      await manager.save(BuyItemOutbox, outbox);
+    });
+ 
+    // Fast path: trừ tiền ngay, không chờ cron
+    // Không await — không block response về client
+    // Cron là fallback nếu crash ở đây
+    this.handleBuyItemPayment({
+      userId: user.auth_id,
+      amount: -tienVatPham,
+      idempotencyKey: `MUA_ITEM:${savedItemId!}`,
+    }).catch(() => {
+      // lỗi đã được log trong handler, cron sẽ lo
+    });
+ 
+    return { message: `Đã thêm item ${itemId} cho user ${username}` };;
+  }
+
+  // ─── Fast path handler: trừ tiền sau khi item đã lưu ─────────────────────────
+  // Tách ra method riêng thay vì @OnEvent để tái sử dụng cho cron
+  async handleBuyItemPayment(payload: {
+    userId: number;
+    amount: number;
+    idempotencyKey: string;
+  }): Promise<void> {
+    try {
+      await this.payService.updateMoney({
+        userId: payload.userId,
+        amount: payload.amount,
+        idempotencyKey: payload.idempotencyKey,
+      });
+ 
+      // Chỉ đánh DONE record khớp đúng idempotencyKey để tránh ảnh hưởng outbox khác
+      await this.buyItemOutboxRepo.update(
+        { payload: { idempotencyKey: payload.idempotencyKey } as any, status: 'PENDING' },
+        { status: 'DONE' },
+      );
+    } catch (error) {
+      console.warn(`[buy-item] fast path fail — cron sẽ retry`, error);
+    }
+  }
+ 
+  // ─── CRON: Retry trừ tiền item ───────────────────────────────────────────────
+  // Không có FAILED — bắt buộc phải trừ được vì item đã tồn tại trong DB
+ 
+  @Cron(CronExpression.EVERY_5_SECONDS)
+  async pollBuyItemOutbox(): Promise<void> {
+    const events = await this.buyItemOutboxRepo.find({
+      where: { status: 'PENDING', nextRetryAt: LessThanOrEqual(new Date()) },
+      order: { createdAt: 'ASC' },
+      take: 20,
+    });
+ 
+    for (const event of events) {
+      // Optimistic lock: chỉ 1 instance xử lý mỗi event
+      const result = await this.buyItemOutboxRepo.update(
+        { id: event.id, status: 'PENDING' },
+        { status: 'PROCESSING' },
+      );
+      if (result.affected === 0) continue;
+ 
+      try {
+        const payload = event.payload as {
+          userId: number;
+          amount: number;
+          idempotencyKey: string;
+        };
+        await this.payService.updateMoney({
+          userId: payload.userId,
+          amount: payload.amount,
+          idempotencyKey: payload.idempotencyKey,
+        });
+        await this.buyItemOutboxRepo.update(event.id, { status: 'DONE' });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const delayMs = Math.pow(2, Math.min(event.retries, 10)) * 5_000;
+        await this.buyItemOutboxRepo.update(event.id, {
+          status: 'PENDING',
+          retries: event.retries + 1,
+          nextRetryAt: new Date(Date.now() + delayMs),
+          lastError: errorMessage,
+        });
+        console.warn(
+          `[buy-item] retry ${event.retries + 1} key: ${(event.payload as any).idempotencyKey}`,
+        );
+ 
+        if (event.retries >= 10) {
+          console.error(`[buy-item] CRITICAL retry ${event.retries} — Pay Service có vấn đề?`, {
+            idempotencyKey: (event.payload as any).idempotencyKey,
+            errorMessage,
+          });
+          // TODO: alert Discord
+        }
+      }
+    }
+  }
+ 
+  // ─── CRON: Recover stuck PROCESSING (buy-item) ───────────────────────────────
+ 
+  @Cron('*/30 * * * * *')
+  async recoverStuckProcessingBuyItem(): Promise<void> {
+    const stuckThreshold = new Date(Date.now() - 5 * 60_000);
+    await this.buyItemOutboxRepo.update(
+      { status: 'PROCESSING', updatedAt: LessThanOrEqual(stuckThreshold) },
+      { status: 'PENDING' },
+    );
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'GetItemsWeb')
