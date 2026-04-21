@@ -538,7 +538,7 @@ export class UserController {
   @GrpcMethod(USER_SERVICE_NAME, 'GetPosition')
   async GetPosition(data: GetPositionRequest): Promise<GetPositionResponse> {
     const userPositionData = await this.userPosition.getPosition(data);
-    const user = await this.userService.findByAuthIdFull(data.userId);
+    const user = await this.userService.findByAuthIdWithStatsAndPosition(data.userId);
     let result;
     if (user) {
       result = {
