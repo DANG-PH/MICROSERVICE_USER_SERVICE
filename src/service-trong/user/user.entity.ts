@@ -20,6 +20,13 @@ export class User_Entity {
   @Column({ nullable: true, default: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ_kwJh8vqmnSIbpOpY3sAGdIP4B7gEUnnYrQ&s' })
   avatarUrl: string;
 
+  // Chấp nhận giống avatarUrl
+  // Để user có thể trả thêm trường username, thì bắt buộc cần tới cái này
+  // Còn cách khác là Api gateway đứng ra promise.all auth và user và merge data trả client
+  // Hiện tại thì chọn cách BFF tạm thời
+  // @Column({ nullable: true })
+  // username: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
